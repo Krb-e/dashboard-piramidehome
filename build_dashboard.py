@@ -124,7 +124,7 @@ table.ke-t tfoot td:first-child{ text-align:left; }
     <div>
       <div class="ke-eyebrow">Performance · Meta · Google · GA4 · Facturacion</div>
       <div class="ke-pg-title">PERFORMANCE<br><span id="rangeLbl">—</span></div>
-      <div class="ke-pg-sub">Datos en vivo desde Supabase · Facturacion desde hoja de ventas</div>
+      
     </div>
     <div class="ke-pg-stat"><div class="ke-pg-stat-val num" id="hAcos">—</div><div class="ke-pg-stat-lbl">ACOS del periodo</div></div>
   </div>
@@ -175,8 +175,8 @@ table.ke-t tfoot td:first-child{ text-align:left; }
     <div class="ke-grid-4">
       <div class="ke-kc"><div class="ke-kl">Sesiones</div><div class="ke-kv w num" id="gaSess">—</div><div class="ke-ks" id="gaUsers">—</div></div>
       <div class="ke-kc g"><div class="ke-kl">Evento clave · Compras</div><div class="ke-kv g num" id="gaTx">—</div><div class="ke-ks" id="gaCvr">—</div></div>
-      <div class="ke-kc p"><div class="ke-kl">Ingresos GA4 (plataforma)</div><div class="ke-kv p num" id="gaRev">—</div><div class="ke-ks">No es facturacion real</div></div>
-      <div class="ke-kc o"><div class="ke-kl">Ticket promedio GA4</div><div class="ke-kv o num" id="gaTicket">—</div><div class="ke-ks">Ingresos GA4 / compras</div></div>
+      <div class="ke-kc p"><div class="ke-kl">Facturacion GA4 (purchase)</div><div class="ke-kv p num" id="gaRev">—</div><div class="ke-ks">Evento clave · purchase</div></div>
+      <div class="ke-kc o"><div class="ke-kl">Ticket promedio GA4</div><div class="ke-kv o num" id="gaTicket">—</div><div class="ke-ks">Facturacion GA4 / compras</div></div>
     </div>
     <div class="ke-grid-2">
       <div class="ke-block"><div class="ke-block-top"></div><div class="ke-bh"><span class="ke-bt">Embudo de conversion</span></div><div class="funnel" id="funnel"></div></div>
@@ -270,7 +270,7 @@ function render(){
   document.getElementById("gaRev").textContent=money(rev);
   document.getElementById("gaTicket").textContent=money(tx>0?rev/tx:0);
   document.getElementById("gaSessPill").textContent=num(sess)+" sesiones";
-  buildFunnel(sess,atc,tx); buildGa(ga);
+  buildFunnel(atc,tx); buildGa(ga);
 }
 function aggBy(arr,key,fields){
   const m={};
@@ -314,12 +314,15 @@ function buildGa(rows){
   const tS=sum(d,r=>r.sessions),tU=sum(d,r=>r.total_users),tT=sum(d,r=>r.transactions);
   document.querySelector("#tGa tfoot").innerHTML="<tr><td>Total ("+d.length+")</td><td>"+num(tS)+"</td><td>"+num(tU)+"</td><td>"+num(tT)+"</td></tr>";
 }
-function buildFunnel(sess,atc,tx){
-  const steps=[{l:"Sesiones",v:sess,c:"#4fa3ff"},{l:"Add to cart",v:atc,c:"#ffd88a"},{l:"Compras (evento clave)",v:tx,c:"#4dcc80"}];
-  const max=Math.max(sess,1); let html="";
+function buildFunnel(atc,tx){
+  const steps=[{l:"Vista de producto",v:null,c:"#4fa3ff"},{l:"Add to cart",v:atc,c:"#ffd88a"},{l:"Payment info",v:null,c:"#c084fc"},{l:"Compra (purchase)",v:tx,c:"#4dcc80"}];
+  const vals=steps.map(s=>s.v).filter(v=>v!=null); const max=Math.max.apply(null,vals.concat([1]));
+  let html="";
   steps.forEach((s,i)=>{
-    const w=Math.max(s.v/max*100, s.v>0?1.5:0);
-    let conv = i>0 ? (steps[i-1].v>0? nf1.format(s.v/steps[i-1].v*100):"0")+"% desde "+steps[i-1].l.toLowerCase() : "base del embudo";
+    if(s.v==null){ html+="<div><div class='fn-row'><span class='fn-lbl'>"+s.l+"</span><span class='fn-val muted'>s/d</span></div><div class='fn-bar'><div class='fn-fill' style='width:3%;background:rgba(230,230,230,.15)'></div></div><div class='fn-conv'>pendiente de dato en GA4</div></div>"; return; }
+    const w=Math.max(s.v/max*100, s.v>0?2:0);
+    let prev=null; for(let j=i-1;j>=0;j--){ if(steps[j].v!=null){ prev=steps[j]; break; } }
+    let conv = prev ? (prev.v>0? nf1.format(s.v/prev.v*100):"0")+"% desde "+prev.l.toLowerCase() : "inicio con dato";
     html+="<div><div class='fn-row'><span class='fn-lbl'>"+s.l+"</span><span class='fn-val' style='color:"+s.c+"'>"+num(s.v)+"</span></div><div class='fn-bar'><div class='fn-fill' style='width:"+w+"%;background:"+s.c+"'></div></div><div class='fn-conv'>"+conv+"</div></div>";
   });
   document.getElementById("funnel").innerHTML=html;
